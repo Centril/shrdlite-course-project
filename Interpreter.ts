@@ -118,6 +118,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         console.log("Required stack order: ");
         var result = getRequieredStackOrderForObject(cmd.entity.object, state);
         console.log(result.key1, result.relation, result.key2);
+        console.log("TODO: We need to find all the objects that match the command. Now we only find the first.");
 
         // ---------------------------------
         // Move the object
