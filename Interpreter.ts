@@ -3,12 +3,12 @@
 
 /**
 * Interpreter module
-* 
+*
 * The goal of the Interpreter module is to interpret a sentence
 * written by the user in the context of the current world state. In
 * particular, it must figure out which objects in the world,
 * i.e. which elements in the `objects` field of WorldState, correspond
-* to the ones referred to in the sentence. 
+* to the ones referred to in the sentence.
 *
 * Moreover, it has to derive what the intended goal state is and
 * return it as a logical formula described in terms of literals, where
@@ -34,7 +34,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 * @param parses List of parses produced by the Parser.
 * @param currentState The current state of the world.
 * @returns Augments ParseResult with a list of interpretations. Each interpretation is represented by a list of Literals.
-*/    
+*/
     export function interpret(parses : Parser.ParseResult[], currentState : WorldState) : InterpretationResult[] {
         var errors : Error[] = [];
         var interpretations : InterpretationResult[] = [];
@@ -76,7 +76,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         polarity : boolean;
 	/** The name of the relation in question. */
         relation : string;
-	/** The arguments to the relation. Usually these will be either objects 
+	/** The arguments to the relation. Usually these will be either objects
      * or special strings such as "floor" or "floor-N" (where N is a column) */
         args : string[];
     }
@@ -106,16 +106,69 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      */
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
+        //console.log(cmd);
+        console.log(state.stacks);
+        //console.log(cmd);
+        //console.log(doesObjectExists(cmd.entity.object, state));
+
+        // ---------------------------------
+        // Does the request object exist
+        // ---------------------------------
+        //doesRequiredStackOrderExistInWorld(getRequieredStackOrderForObject(object, state));
+        console.log("Required stack order: ");
+        var result = getRequieredStackOrderForObject(cmd.entity.object, state);
+        console.log(result.key1, result.relation, result.key2);
+
+        // ---------------------------------
+        // Move the object
+        // ---------------------------------
+
         // This returns a dummy interpretation involving two random objects in the world
         var objects : string[] = Array.prototype.concat.apply([], state.stacks);
         var a : string = objects[Math.floor(Math.random() * objects.length)];
         var b : string = objects[Math.floor(Math.random() * objects.length)];
+
+
+
         var interpretation : DNFFormula = [[
-            {polarity: true, relation: "ontop", args: [a, "floor"]},
+            {polarity: true, relation: "inside", args: ["e", "k"]},
             {polarity: true, relation: "holding", args: [b]}
         ]];
         return interpretation;
     }
 
+    // return - requeried order for stack for example 'e','f' || 'e'
+    function getRequieredStackOrderForObject(object: Parser.Object, state: WorldState): ObjectRelations {
+      if (object.location != null) { //
+        // related object
+        var key1 = getObjectKey(object.object, state);
+        var key2 = getObjectKey(object.location.entity.object, state);
+        return new ObjectRelations(key1, object.location.relation, key2);
+      } else {
+        return new ObjectRelations(getObjectKey(object, state), "", null);
+
+      }
+    }
+
+
+
+    function getObjectKey(object: Parser.Object, state: WorldState): string {
+      for(let key in state.objects) {
+        if (
+          (object.form == state.objects[key].form || object.form == "anyform")
+          && (object.color == state.objects[key].color || object.color == null)
+          && (object.size == state.objects[key].size  || object.size == null)) {
+            console.log("Found ", state.objects[key]);
+            return key;
+          }
+      }
+      return null;
+    }
+
+
 }
 
+class ObjectRelations {
+  constructor(public key1 : string, public relation : string, public key2 :string ) {
+  }
+}
