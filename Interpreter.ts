@@ -107,69 +107,300 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
      */
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
         //console.log(cmd);
-        console.log(state.stacks);
-        //console.log(cmd);
-        //console.log(doesObjectExists(cmd.entity.object, state));
-
+        //console.log(state.stacks);
+        //console.log(state.objects);
         // ---------------------------------
-        // Does the request object exist
+        // Does the request object exist?
         // ---------------------------------
-        //doesRequiredStackOrderExistInWorld(getRequieredStackOrderForObject(object, state));
-        console.log("Required stack order: ");
-        var result = getRequieredStackOrderForObject(cmd.entity.object, state);
-        console.log(result.key1, result.relation, result.key2);
-        console.log("TODO: We need to find all the objects that match the command. Now we only find the first.");
+        var requestedObjectRelations = getRequestedObjectRelations(cmd.entity.object, state);
+        var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedObjectRelations, state);
 
+        if (objectRelationsThatExistsInWorld.length == 0) {
+          //console.log("FOUND NO POSSIBLE OBJECTS");
+          throw "No possible objects found";
+        }
         // ---------------------------------
-        // Move the object
+        // Move the object to the desired location
         // ---------------------------------
+        var my_interpretation : DNFFormula = [];
+        for (var objectRelation of objectRelationsThatExistsInWorld) {
+          var results: Conjunction = getPossibleMoves(cmd.command, objectRelation.targetObject, cmd.location, state);
+          for (var result of results) {
+              my_interpretation.push([result]);
+          }
+        }
+        if (my_interpretation.length == 0) {
+          //console.log("FOUND NO POSSIBLE MOVES");
+          throw "No possible objects to move";
+        }
+        //console.log(my_interpretation);
+        return my_interpretation;
 
-        // This returns a dummy interpretation involving two random objects in the world
-        var objects : string[] = Array.prototype.concat.apply([], state.stacks);
-        var a : string = objects[Math.floor(Math.random() * objects.length)];
-        var b : string = objects[Math.floor(Math.random() * objects.length)];
+    }
 
 
+    function getPossibleMoves(command: string, objectToMove: string, location: Parser.Location, state: WorldState) : Conjunction {
+      //console.log(location);
+      var result : Conjunction = [];
+      if (command == "take") {
+        result.push({polarity: true, relation: "holding", args: [objectToMove]});
+      } else if (command == "move") {
+        // We are not interested in the location of the object where objectToMove
+        // is going to be placed
+        if (location.entity.object.location == null) {
+          var locationObjectKeys = getObjectKeys(location.entity.object, state);
+          //console.log("Possible locations: ", locationObjectKeys);
+          for (var locationObjectKey of locationObjectKeys) {
+            // TODO: Change to Literal
+            if (isMoveValid(objectToMove, location.relation, locationObjectKey, state)) {
+              result.push({polarity: true, relation: location.relation, args: [objectToMove, locationObjectKey]});
+            }
+          }
+        } else {
+          // We are interested in the location of the object where objectToMove
+          // is going to be placed
+          //console.log(location.entity.object.location);
 
-        var interpretation : DNFFormula = [[
-            {polarity: true, relation: "inside", args: ["e", "k"]},
-            {polarity: true, relation: "holding", args: [b]}
-        ]];
-        return interpretation;
+          // -----------------------------------------
+          // Find the location object that are in the right place.
+          // -----------------------------------------
+          var requestedRelations: ObjectRelations[] = [];
+
+          // Vi får boxen.
+          var targetObjects = getObjectKeys(location.entity.object.object, state);
+          // Den ska stå uppepå golvet
+          var locationObjects = getObjectKeys(location.entity.object.location.entity.object, state);
+
+          for(var targetObject of targetObjects) {
+            for(var locationObject of locationObjects) {
+              //console.log(targetObject + " " + object.location.relation + " " + locationObject);
+              requestedRelations.push(new ObjectRelations(targetObject, location.entity.object.location.relation, locationObject));
+            }
+          }
+          var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedRelations, state);
+          //console.log("Requested locations: ", requestedRelations);
+          //console.log("Actual locations that exists ", objectRelationsThatExistsInWorld);
+          // -----------------------------------------
+          // Return the objectToMove to which location.
+          // -----------------------------------------
+          for(var objectRelation of objectRelationsThatExistsInWorld) {
+              if (isMoveValid(objectToMove, location.relation, objectRelation.targetObject, state)) {
+                result.push({polarity: true, relation: location.relation, args: [objectToMove, objectRelation.targetObject]});
+              }
+          }
+        }
+      }
+      //console.log(result);
+      return result;
+    }
+
+    function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
+      if (relation == "inside" && getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small") {
+        return false;
+      } else if (relation == "ontop" && getObjectForm(objectToMove, state) == "ball" && getObjectForm(targetObject, state) == "table") {
+        return false;
+      } else if (relation == "leftof" && targetObject == objectToMove) {
+        return false;
+      }
+      return true;
+    }
+
+    // returns which objects that satisfy the constraint
+    /*
+    function interpret_location(location: Parser.Location, state: WorldState): LocationRelation {
+      var relations: LocationRelation[] = [];
+      if (location.entity.object.location == null) {
+        var locationObjectKeys = getObjectKeys(location.entity.object, state);
+        // console.log("Possible locations: ", locationObjectKeys);
+        for (var locationObjectKey of locationObjectKeys) {
+          // Check if they exist in the world.
+
+          // TODO: Change to Literal
+          //relations.push(new ObjectRelations(objectKey, location.relation, locationObjectKey));
+          // result.push({polarity: true, relation: location.relation, args: [objectKey, locationObjectKey]});
+        }
+      } else {
+        console.log(location.entity.object.location);
+      }
+      return relations;
+    }
+    */
+
+    function getObjectRelationsThatExistsInWorld(objectRelations: ObjectRelations[], state: WorldState) {
+      //console.log(state);
+      var resultingObjectRelations: ObjectRelations[] = [];
+      var foundObjectRelation: Boolean = false;
+      for(var objectRelation of objectRelations) {
+        if (objectRelation.relation == "beside") {
+          foundObjectRelation = isBeside(state.stacks, objectRelation.targetObject, objectRelation.locationObject);
+        /*} else if (objectRelation.relation == "leftof") {
+          console.log("here");
+          foundObjectRelation = isLeftOf(state.stacks, objectRelation.targetObject, objectRelation.locationObject);*/
+        } else if (objectRelation.relation == "") {
+          foundObjectRelation = doesObjectExist(state.stacks, objectRelation.targetObject);
+        } else {
+          for (var stack of state.stacks) {
+            if (objectRelation.relation == "inside") {
+              foundObjectRelation = isInside(stack, objectRelation.targetObject, objectRelation.locationObject);
+            } else if (objectRelation.relation == "ontop") {
+              foundObjectRelation = isOnTop(stack, objectRelation.targetObject, objectRelation.locationObject);
+            } else {
+              console.log("WARNING: not implemented to check world for " +objectRelation.relation);
+            }
+            if (foundObjectRelation) {
+                break;
+            }
+          }
+        }
+        if (foundObjectRelation) {
+          //console.log("ObjectRelation that exists in world ", objectRelation);
+          resultingObjectRelations.push(objectRelation);
+
+        }
+        foundObjectRelation = false;
+      }
+      return resultingObjectRelations;
     }
 
     // return - requeried order for stack for example 'e','f' || 'e'
-    function getRequieredStackOrderForObject(object: Parser.Object, state: WorldState): ObjectRelations {
+    // the same as interpret_object
+    function getRequestedObjectRelations(object: Parser.Object, state: WorldState): ObjectRelations[] {
+      var relations: ObjectRelations[] = [];
       if (object.location != null) { //
-        // related object
-        var key1 = getObjectKey(object.object, state);
-        var key2 = getObjectKey(object.location.entity.object, state);
-        return new ObjectRelations(key1, object.location.relation, key2);
+        // target object
+        var targetObjects = getObjectKeys(object.object, state);
+        var locationObjects = getObjectKeys(object.location.entity.object, state);
+        for(var targetObject of targetObjects) {
+          for(var locationObject of locationObjects) {
+            //console.log(targetObject + " " + object.location.relation + " " + locationObject);
+            relations.push(new ObjectRelations(targetObject, object.location.relation, locationObject));
+          }
+        }
       } else {
-        return new ObjectRelations(getObjectKey(object, state), "", null);
-
+        var targetObjects = getObjectKeys(object, state);
+        for(var targetObject of targetObjects) {
+          relations.push(new ObjectRelations(targetObject, "", null));
+        }
       }
+      return relations;
     }
 
-
-
-    function getObjectKey(object: Parser.Object, state: WorldState): string {
+    function getObjectSize(objectKey: string, state: WorldState): string {
       for(let key in state.objects) {
-        if (
-          (object.form == state.objects[key].form || object.form == "anyform")
-          && (object.color == state.objects[key].color || object.color == null)
-          && (object.size == state.objects[key].size  || object.size == null)) {
-            console.log("Found ", state.objects[key]);
-            return key;
-          }
+        if (key == objectKey) {
+          return state.objects[key].size;
+        }
       }
       return null;
     }
 
+    function getObjectForm(objectKey: string, state: WorldState): string {
+      for(let key in state.objects) {
+        if (key == objectKey) {
+          return state.objects[key].form;
+        }
+      }
+      return null;
+    }
+    // Return all the objects in the world state that matches the criteria.
+    function getObjectKeys(object: Parser.Object, state: WorldState): string[] {
+      var keys: string[] = [];
+      if (object.form == "floor") {
+        keys.push("floor");
+      } else {
+        for(let key in state.objects) {
+          if (
+            (object.form == state.objects[key].form || object.form == "anyform")
+            && (object.color == state.objects[key].color || object.color == null)
+            && (object.size == state.objects[key].size  || object.size == null)) {
+              //console.log("Found " + key + ": ", state.objects[key]);
+              if (doesObjectExist(state.stacks, key)) {
+                keys.push(key);
+              }
+            }
+        }
+      }
+      return keys;
+    }
 
+
+    // Check world state with relations.
+    function doesObjectExist(stacks: string[][], searched_object: string) : Boolean {
+      for(var stack of stacks) {
+        for(var object of stack) {
+          if (object == searched_object) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    function isInside(stack: string[], insideObject: string, holdingObject: string) : Boolean {
+      var foundHoldingObject: Boolean = false;
+      for(var object of stack) {
+        if (foundHoldingObject) {
+          return object == insideObject;
+        }
+        if (object == holdingObject) {
+          foundHoldingObject = true;
+        }
+      }
+      return false;
+    }
+
+    function isMostLeft(stacks: string[][], _object: string) : Boolean {
+      for(var stack of stacks) {
+        for(var object of stack) {
+          if (object == _object) {
+            return true;
+          }
+        }
+        break;
+      }
+      return false;
+    }
+
+    function isBeside(stacks: string[][], firstObject: string, secondObject: string) : Boolean {
+      var firstObjectStackNr: number = -10;
+      var secondObjectStackNr: number = -10;
+      for(var stack_number in stacks) {
+        for(var object of stacks[stack_number]) {
+          if (object == firstObject) {
+            firstObjectStackNr = +stack_number;
+            break;
+          } else if (object == secondObject) {
+            secondObjectStackNr = +stack_number;
+            break;
+          }
+        }
+      }
+      return Math.abs(secondObjectStackNr - firstObjectStackNr) == 1;
+    }
+
+    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string) : Boolean {
+      var foundObjectBelow: Boolean = false;
+      for(var key in stack) {
+        if (foundObjectBelow) {
+          return stack[key] == objectOnTop;
+        }
+        if (stack[key] == objectBelow) {
+          foundObjectBelow = true;
+        }
+        // If we find a object that is on the floor
+        if (objectBelow == "floor" && stack[key] == objectOnTop && key == "0") {
+          return true;
+        }
+      }
+      return false;
+    }
 }
 
 class ObjectRelations {
-  constructor(public key1 : string, public relation : string, public key2 :string ) {
+  constructor(public targetObject : string, public relation : string, public locationObject :string ) {
+  }
+}
+class LocationRelation {
+  constructor(public relation : string, public locationObject :string ) {
   }
 }
