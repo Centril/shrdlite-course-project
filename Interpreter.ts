@@ -106,9 +106,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
      * @returns A list of list of Literal, representing a formula in disjunctive normal form (disjunction of conjunctions). See the dummy interpetation returned in the code for an example, which means ontop(a,floor) AND holding(b).
      */
     function interpretCommand(cmd : Parser.Command, state : WorldState) : DNFFormula {
-        //console.log(cmd);
-        //console.log(state.stacks);
-        //console.log(state.objects);
         // ---------------------------------
         // Does the request object exist?
         // ---------------------------------
@@ -119,6 +116,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
           //console.log("FOUND NO POSSIBLE OBJECTS");
           throw "No possible objects found";
         }
+
         // ---------------------------------
         // Move the object to the desired location
         // ---------------------------------
@@ -130,17 +128,14 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
           }
         }
         if (my_interpretation.length == 0) {
-          //console.log("FOUND NO POSSIBLE MOVES");
           throw "No possible objects to move";
         }
-        //console.log(my_interpretation);
-        return my_interpretation;
 
+        return my_interpretation;
     }
 
 
     function getPossibleMoves(command: string, objectToMove: string, location: Parser.Location, state: WorldState) : Conjunction {
-      //console.log(location);
       var result : Conjunction = [];
       if (command == "take") {
         result.push({polarity: true, relation: "holding", args: [objectToMove]});
@@ -159,16 +154,12 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         } else {
           // We are interested in the location of the object where objectToMove
           // is going to be placed
-          //console.log(location.entity.object.location);
-
           // -----------------------------------------
           // Find the location object that are in the right place.
           // -----------------------------------------
           var requestedRelations: ObjectRelations[] = [];
 
-          // Vi får boxen.
           var targetObjects = getObjectKeys(location.entity.object.object, state);
-          // Den ska stå uppepå golvet
           var locationObjects = getObjectKeys(location.entity.object.location.entity.object, state);
 
           for(var targetObject of targetObjects) {
@@ -177,9 +168,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
               requestedRelations.push(new ObjectRelations(targetObject, location.entity.object.location.relation, locationObject));
             }
           }
+          // Validate locations
           var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedRelations, state);
-          //console.log("Requested locations: ", requestedRelations);
-          //console.log("Actual locations that exists ", objectRelationsThatExistsInWorld);
+
           // -----------------------------------------
           // Return the objectToMove to which location.
           // -----------------------------------------
@@ -190,7 +181,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
           }
         }
       }
-      //console.log(result);
       return result;
     }
 
@@ -205,37 +195,14 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return true;
     }
 
-    // returns which objects that satisfy the constraint
-    /*
-    function interpret_location(location: Parser.Location, state: WorldState): LocationRelation {
-      var relations: LocationRelation[] = [];
-      if (location.entity.object.location == null) {
-        var locationObjectKeys = getObjectKeys(location.entity.object, state);
-        // console.log("Possible locations: ", locationObjectKeys);
-        for (var locationObjectKey of locationObjectKeys) {
-          // Check if they exist in the world.
-
-          // TODO: Change to Literal
-          //relations.push(new ObjectRelations(objectKey, location.relation, locationObjectKey));
-          // result.push({polarity: true, relation: location.relation, args: [objectKey, locationObjectKey]});
-        }
-      } else {
-        console.log(location.entity.object.location);
-      }
-      return relations;
-    }
-    */
-
+    // Check whether the specified relation exists in the world
+    // @return: - a list of ObjectRelations that exists in the world.
     function getObjectRelationsThatExistsInWorld(objectRelations: ObjectRelations[], state: WorldState) {
-      //console.log(state);
       var resultingObjectRelations: ObjectRelations[] = [];
       var foundObjectRelation: Boolean = false;
       for(var objectRelation of objectRelations) {
         if (objectRelation.relation == "beside") {
           foundObjectRelation = isBeside(state.stacks, objectRelation.targetObject, objectRelation.locationObject);
-        /*} else if (objectRelation.relation == "leftof") {
-          console.log("here");
-          foundObjectRelation = isLeftOf(state.stacks, objectRelation.targetObject, objectRelation.locationObject);*/
         } else if (objectRelation.relation == "") {
           foundObjectRelation = doesObjectExist(state.stacks, objectRelation.targetObject);
         } else {
@@ -253,17 +220,15 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
           }
         }
         if (foundObjectRelation) {
-          //console.log("ObjectRelation that exists in world ", objectRelation);
           resultingObjectRelations.push(objectRelation);
-
         }
         foundObjectRelation = false;
       }
       return resultingObjectRelations;
     }
 
-    // return - requeried order for stack for example 'e','f' || 'e'
-    // the same as interpret_object
+    // Look at an object and determine how the location should look like
+    // @return - requeried order for stack for example 'e','f' || 'e'
     function getRequestedObjectRelations(object: Parser.Object, state: WorldState): ObjectRelations[] {
       var relations: ObjectRelations[] = [];
       if (object.location != null) { //
