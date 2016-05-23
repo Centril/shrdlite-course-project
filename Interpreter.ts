@@ -109,11 +109,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         // ---------------------------------
         // Does the request object exist?
         // ---------------------------------
+        console.log(state.objects);
         var requestedObjectRelations = getRequestedObjectRelations(cmd.entity.object, state);
         var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedObjectRelations, state);
 
         if (objectRelationsThatExistsInWorld.length == 0) {
-          //console.log("FOUND NO POSSIBLE OBJECTS");
           throw "No possible objects found";
         }
 
@@ -130,54 +130,53 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if (my_interpretation.length == 0) {
           throw "No possible objects to move";
         }
-
+        //console.log(my_interpretation);
         return my_interpretation;
     }
 
 
     function getPossibleMoves(command: string, objectToMove: string, location: Parser.Location, state: WorldState) : Conjunction {
       var result : Conjunction = [];
-      if (command == "take") {
-        result.push({polarity: true, relation: "holding", args: [objectToMove]});
-      } else if (command == "move") {
-        // We are not interested in the location of the object where objectToMove
-        // is going to be placed
-        if (location.entity.object.location == null) {
-          var locationObjectKeys = getObjectKeys(location.entity.object, state);
-          //console.log("Possible locations: ", locationObjectKeys);
-          for (var locationObjectKey of locationObjectKeys) {
-            // TODO: Change to Literal
-            if (isMoveValid(objectToMove, location.relation, locationObjectKey, state)) {
-              result.push({polarity: true, relation: location.relation, args: [objectToMove, locationObjectKey]});
-            }
-          }
-        } else {
-          // We are interested in the location of the object where objectToMove
+      if (objectToMove != "floor") {
+        if (command == "take") {
+          result.push({polarity: true, relation: "holding", args: [objectToMove]});
+        } else if (command == "move" || command == "put") {
+          // We are not interested in the location of the object where objectToMove
           // is going to be placed
-          // -----------------------------------------
-          // Find the location object that are in the right place.
-          // -----------------------------------------
-          var requestedRelations: ObjectRelations[] = [];
-
-          var targetObjects = getObjectKeys(location.entity.object.object, state);
-          var locationObjects = getObjectKeys(location.entity.object.location.entity.object, state);
-
-          for(var targetObject of targetObjects) {
-            for(var locationObject of locationObjects) {
-              //console.log(targetObject + " " + object.location.relation + " " + locationObject);
-              requestedRelations.push(new ObjectRelations(targetObject, location.entity.object.location.relation, locationObject));
-            }
-          }
-          // Validate locations
-          var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedRelations, state);
-
-          // -----------------------------------------
-          // Return the objectToMove to which location.
-          // -----------------------------------------
-          for(var objectRelation of objectRelationsThatExistsInWorld) {
-              if (isMoveValid(objectToMove, location.relation, objectRelation.targetObject, state)) {
-                result.push({polarity: true, relation: location.relation, args: [objectToMove, objectRelation.targetObject]});
+          if (location.entity.object.location == null) {
+            var locationObjectKeys = getObjectKeys(location.entity.object, state);
+            for (var locationObjectKey of locationObjectKeys) {
+              if (isMoveValid(objectToMove, location.relation, locationObjectKey, state)) {
+                result.push({polarity: true, relation: location.relation, args: [objectToMove, locationObjectKey]});
               }
+            }
+          } else {
+            // We are interested in the location of the object where objectToMove
+            // is going to be placed
+            // -----------------------------------------
+            // Find the location object that are in the right place.
+            // -----------------------------------------
+            var requestedRelations: ObjectRelations[] = [];
+
+            var targetObjects = getObjectKeys(location.entity.object.object, state);
+            var locationObjects = getObjectKeys(location.entity.object.location.entity.object, state);
+
+            for(var targetObject of targetObjects) {
+              for(var locationObject of locationObjects) {
+                requestedRelations.push(new ObjectRelations(targetObject, location.entity.object.location.relation, locationObject));
+              }
+            }
+            // Validate locations
+            var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedRelations, state);
+
+            // -----------------------------------------
+            // Return the objectToMove to which location.
+            // -----------------------------------------
+            for(var objectRelation of objectRelationsThatExistsInWorld) {
+                if (isMoveValid(objectToMove, location.relation, objectRelation.targetObject, state)) {
+                  result.push({polarity: true, relation: location.relation, args: [objectToMove, objectRelation.targetObject]});
+                }
+            }
           }
         }
       }
@@ -185,7 +184,27 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
+      console.log("Moving(keys): " + objectToMove + ", to(key): " + targetObject);
+      console.log("Move object: a " + getObjectSize(objectToMove, state) + " " +  getObjectForm(objectToMove, state) + " to a: "
+        + getObjectSize(targetObject, state) + " " +  getObjectForm(targetObject, state));
       if (relation == "inside" && getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small") {
+        return false;
+      } else if (
+          (
+            getObjectForm(objectToMove, state) == "box" ||
+            getObjectForm(objectToMove, state) == "plank" ||
+            getObjectForm(objectToMove, state) == "pyramid"
+          )
+          && getObjectForm(targetObject, state) == "box") {
+        if (getObjectSize(objectToMove, state) == "large" || getObjectSize(targetObject, state) == "small") {
+          console.log("should not do that!");
+          return false;
+        }
+      } else if (
+          getObjectForm(objectToMove, state) == "box" && (
+            getObjectForm(targetObject, state) == "brick" ||
+            getObjectForm(targetObject, state) == "pyramid"
+          )) {
         return false;
       } else if (relation == "ontop" && getObjectForm(objectToMove, state) == "ball" && getObjectForm(targetObject, state) == "table") {
         return false;
@@ -208,9 +227,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         } else {
           for (var stack of state.stacks) {
             if (objectRelation.relation == "inside") {
-              foundObjectRelation = isInside(stack, objectRelation.targetObject, objectRelation.locationObject);
+              foundObjectRelation = isInside(stack, objectRelation.targetObject, objectRelation.locationObject, state);
             } else if (objectRelation.relation == "ontop") {
-              foundObjectRelation = isOnTop(stack, objectRelation.targetObject, objectRelation.locationObject);
+              foundObjectRelation = isOnTop(stack, objectRelation.targetObject, objectRelation.locationObject, state);
             } else {
               console.log("WARNING: not implemented to check world for " +objectRelation.relation);
             }
@@ -237,7 +256,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         var locationObjects = getObjectKeys(object.location.entity.object, state);
         for(var targetObject of targetObjects) {
           for(var locationObject of locationObjects) {
-            //console.log(targetObject + " " + object.location.relation + " " + locationObject);
             relations.push(new ObjectRelations(targetObject, object.location.relation, locationObject));
           }
         }
@@ -278,7 +296,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             (object.form == state.objects[key].form || object.form == "anyform")
             && (object.color == state.objects[key].color || object.color == null)
             && (object.size == state.objects[key].size  || object.size == null)) {
-              //console.log("Found " + key + ": ", state.objects[key]);
               if (doesObjectExist(state.stacks, key)) {
                 keys.push(key);
               }
@@ -301,14 +318,17 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return false;
     }
 
-    function isInside(stack: string[], insideObject: string, holdingObject: string) : Boolean {
-      var foundHoldingObject: Boolean = false;
-      for(var object of stack) {
-        if (foundHoldingObject) {
-          return object == insideObject;
-        }
-        if (object == holdingObject) {
-          foundHoldingObject = true;
+    function isInside(stack: string[], objectInside: string, objectBelow: string, state: WorldState) : Boolean {
+      // Cannot be inside a table.
+      if (getObjectForm(objectBelow, state) != "table") {
+        var foundObjectBelow: Boolean = false;
+        for(var object of stack) {
+          if (foundObjectBelow) {
+            return object == objectInside;
+          }
+          if (object == objectBelow) {
+            foundObjectBelow = true;
+          }
         }
       }
       return false;
@@ -343,18 +363,21 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return Math.abs(secondObjectStackNr - firstObjectStackNr) == 1;
     }
 
-    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string) : Boolean {
-      var foundObjectBelow: Boolean = false;
-      for(var key in stack) {
-        if (foundObjectBelow) {
-          return stack[key] == objectOnTop;
-        }
-        if (stack[key] == objectBelow) {
-          foundObjectBelow = true;
-        }
-        // If we find a object that is on the floor
-        if (objectBelow == "floor" && stack[key] == objectOnTop && key == "0") {
-          return true;
+    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string, state: WorldState) : Boolean {
+      // You need to be inside a box.
+      if (getObjectForm(objectBelow, state) != "box") {
+        var foundObjectBelow: Boolean = false;
+        for(var key in stack) {
+          if (foundObjectBelow) {
+            return stack[key] == objectOnTop;
+          }
+          if (stack[key] == objectBelow) {
+            foundObjectBelow = true;
+          }
+          // If we find a object that is on the floor
+          if (objectBelow == "floor" && stack[key] == objectOnTop && key == "0") {
+            return true;
+          }
         }
       }
       return false;
