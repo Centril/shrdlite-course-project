@@ -109,7 +109,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         // ---------------------------------
         // Does the request object exist?
         // ---------------------------------
-        console.log(state.objects);
         var requestedObjectRelations = getRequestedObjectRelations(cmd.entity.object, state);
         var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedObjectRelations, state);
 
@@ -130,7 +129,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         if (my_interpretation.length == 0) {
           throw "No possible objects to move";
         }
-        //console.log(my_interpretation);
         return my_interpretation;
     }
 
@@ -184,9 +182,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
-      console.log("Moving(keys): " + objectToMove + ", to(key): " + targetObject);
-      console.log("Move object: a " + getObjectSize(objectToMove, state) + " " +  getObjectForm(objectToMove, state) + " to a: "
-        + getObjectSize(targetObject, state) + " " +  getObjectForm(targetObject, state));
       if (relation == "inside" && getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small") {
         return false;
       } else if (
@@ -197,7 +192,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
           )
           && getObjectForm(targetObject, state) == "box") {
         if (getObjectSize(objectToMove, state) == "large" || getObjectSize(targetObject, state) == "small") {
-          console.log("should not do that!");
           return false;
         }
       } else if (
@@ -344,6 +338,40 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         break;
       }
       return false;
+    }
+
+    function isRightOf(stacks: string[][], rightObject: string, secondObject: string) : Boolean {
+      var rightObjectStackNr: number = -10;
+      var secondObjectStackNr: number = -10;
+      for(var stack_number in stacks) {
+        for(var object of stacks[stack_number]) {
+          if (object == rightObject) {
+            rightObjectStackNr = +stack_number;
+            break;
+          } else if (object == secondObject) {
+            secondObjectStackNr = +stack_number;
+            break;
+          }
+        }
+      }
+      return rightObjectStackNr - secondObjectStackNr == 1;
+    }
+
+    function isLeftOf(stacks: string[][], leftObject: string, secondObject: string) : Boolean {
+      var leftObjectStackNr: number = -10;
+      var secondObjectStackNr: number = -10;
+      for(var stack_number in stacks) {
+        for(var object of stacks[stack_number]) {
+          if (object == leftObject) {
+            leftObjectStackNr = +stack_number;
+            break;
+          } else if (object == secondObject) {
+            secondObjectStackNr = +stack_number;
+            break;
+          }
+        }
+      }
+      return secondObjectStackNr - leftObjectStackNr == 1;
     }
 
     function isBeside(stacks: string[][], firstObject: string, secondObject: string) : Boolean {
