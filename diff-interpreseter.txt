@@ -1,0 +1,188 @@
+diff --git a/Interpreter.ts b/Interpreter.ts
+index 7c55dd3..64a92c4 100644
+--- a/Interpreter.ts
++++ b/Interpreter.ts
+@@ -113,7 +113,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+         var objectRelationsThatExistsInWorld = getObjectRelationsThatExistsInWorld(requestedObjectRelations, state);
+ 
+         if (objectRelationsThatExistsInWorld.length == 0) {
+-          //console.log("FOUND NO POSSIBLE OBJECTS");
+           throw "No possible objects found";
+         }
+ 
+@@ -130,23 +129,21 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+         if (my_interpretation.length == 0) {
+           throw "No possible objects to move";
+         }
+-
+         return my_interpretation;
+     }
+ 
+ 
+     function getPossibleMoves(command: string, objectToMove: string, location: Parser.Location, state: WorldState) : Conjunction {
+       var result : Conjunction = [];
++      if (objectToMove != "floor") {
+         if (command == "take") {
+           result.push({polarity: true, relation: "holding", args: [objectToMove]});
+-      } else if (command == "move") {
++        } else if (command == "move" || command == "put") {
+           // We are not interested in the location of the object where objectToMove
+           // is going to be placed
+           if (location.entity.object.location == null) {
+             var locationObjectKeys = getObjectKeys(location.entity.object, state);
+-          //console.log("Possible locations: ", locationObjectKeys);
+             for (var locationObjectKey of locationObjectKeys) {
+-            // TODO: Change to Literal
+               if (isMoveValid(objectToMove, location.relation, locationObjectKey, state)) {
+                 result.push({polarity: true, relation: location.relation, args: [objectToMove, locationObjectKey]});
+               }
+@@ -164,7 +161,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+ 
+             for(var targetObject of targetObjects) {
+               for(var locationObject of locationObjects) {
+-              //console.log(targetObject + " " + object.location.relation + " " + locationObject);
+                 requestedRelations.push(new ObjectRelations(targetObject, location.entity.object.location.relation, locationObject));
+               }
+             }
+@@ -181,12 +177,29 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+             }
+           }
+         }
++      }
+       return result;
+     }
+ 
+     function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
+       if (relation == "inside" && getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small") {
+         return false;
++      } else if (
++          (
++            getObjectForm(objectToMove, state) == "box" ||
++            getObjectForm(objectToMove, state) == "plank" ||
++            getObjectForm(objectToMove, state) == "pyramid"
++          )
++          && getObjectForm(targetObject, state) == "box") {
++        if (getObjectSize(objectToMove, state) == "large" || getObjectSize(targetObject, state) == "small") {
++          return false;
++        }
++      } else if (
++          getObjectForm(objectToMove, state) == "box" && (
++            getObjectForm(targetObject, state) == "brick" ||
++            getObjectForm(targetObject, state) == "pyramid"
++          )) {
++        return false;
+       } else if (relation == "ontop" && getObjectForm(objectToMove, state) == "ball" && getObjectForm(targetObject, state) == "table") {
+         return false;
+       } else if (relation == "leftof" && targetObject == objectToMove) {
+@@ -208,9 +221,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+         } else {
+           for (var stack of state.stacks) {
+             if (objectRelation.relation == "inside") {
+-              foundObjectRelation = isInside(stack, objectRelation.targetObject, objectRelation.locationObject);
++              foundObjectRelation = isInside(stack, objectRelation.targetObject, objectRelation.locationObject, state);
+             } else if (objectRelation.relation == "ontop") {
+-              foundObjectRelation = isOnTop(stack, objectRelation.targetObject, objectRelation.locationObject);
++              foundObjectRelation = isOnTop(stack, objectRelation.targetObject, objectRelation.locationObject, state);
+             } else {
+               console.log("WARNING: not implemented to check world for " +objectRelation.relation);
+             }
+@@ -237,7 +250,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+         var locationObjects = getObjectKeys(object.location.entity.object, state);
+         for(var targetObject of targetObjects) {
+           for(var locationObject of locationObjects) {
+-            //console.log(targetObject + " " + object.location.relation + " " + locationObject);
+             relations.push(new ObjectRelations(targetObject, object.location.relation, locationObject));
+           }
+         }
+@@ -278,7 +290,6 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+             (object.form == state.objects[key].form || object.form == "anyform")
+             && (object.color == state.objects[key].color || object.color == null)
+             && (object.size == state.objects[key].size  || object.size == null)) {
+-              //console.log("Found " + key + ": ", state.objects[key]);
+               if (doesObjectExist(state.stacks, key)) {
+                 keys.push(key);
+               }
+@@ -301,14 +312,17 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+       return false;
+     }
+ 
+-    function isInside(stack: string[], insideObject: string, holdingObject: string) : Boolean {
+-      var foundHoldingObject: Boolean = false;
++    function isInside(stack: string[], objectInside: string, objectBelow: string, state: WorldState) : Boolean {
++      // Cannot be inside a table.
++      if (getObjectForm(objectBelow, state) != "table") {
++        var foundObjectBelow: Boolean = false;
+         for(var object of stack) {
+-        if (foundHoldingObject) {
+-          return object == insideObject;
++          if (foundObjectBelow) {
++            return object == objectInside;
++          }
++          if (object == objectBelow) {
++            foundObjectBelow = true;
+           }
+-        if (object == holdingObject) {
+-          foundHoldingObject = true;
+         }
+       }
+       return false;
+@@ -326,6 +340,40 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+       return false;
+     }
+ 
++    function isRightOf(stacks: string[][], rightObject: string, secondObject: string) : Boolean {
++      var rightObjectStackNr: number = -10;
++      var secondObjectStackNr: number = -10;
++      for(var stack_number in stacks) {
++        for(var object of stacks[stack_number]) {
++          if (object == rightObject) {
++            rightObjectStackNr = +stack_number;
++            break;
++          } else if (object == secondObject) {
++            secondObjectStackNr = +stack_number;
++            break;
++          }
++        }
++      }
++      return rightObjectStackNr - secondObjectStackNr == 1;
++    }
++
++    function isLeftOf(stacks: string[][], leftObject: string, secondObject: string) : Boolean {
++      var leftObjectStackNr: number = -10;
++      var secondObjectStackNr: number = -10;
++      for(var stack_number in stacks) {
++        for(var object of stacks[stack_number]) {
++          if (object == leftObject) {
++            leftObjectStackNr = +stack_number;
++            break;
++          } else if (object == secondObject) {
++            secondObjectStackNr = +stack_number;
++            break;
++          }
++        }
++      }
++      return secondObjectStackNr - leftObjectStackNr == 1;
++    }
++
+     function isBeside(stacks: string[][], firstObject: string, secondObject: string) : Boolean {
+       var firstObjectStackNr: number = -10;
+       var secondObjectStackNr: number = -10;
+@@ -343,7 +391,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+       return Math.abs(secondObjectStackNr - firstObjectStackNr) == 1;
+     }
+ 
+-    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string) : Boolean {
++    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string, state: WorldState) : Boolean {
++      // You need to be inside a box.
++      if (getObjectForm(objectBelow, state) != "box") {
+         var foundObjectBelow: Boolean = false;
+         for(var key in stack) {
+           if (foundObjectBelow) {
+@@ -357,6 +407,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
+             return true;
+           }
+         }
++      }
+       return false;
+     }
+ }
