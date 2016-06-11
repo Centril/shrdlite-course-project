@@ -151,7 +151,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             for (var locationObjectKey of locationObjectKeys) {
               if (isMoveValid(objectToMove, location.relation, locationObjectKey, state)) {
                 if (objectToMove == "itself") {
-                  result.push({polarity: true, relation: location.relation, args: [locationObjectKey]});
+                  if (state.holding != null) {
+                      result.push({polarity: true, relation: location.relation, args: [state.holding, locationObjectKey]});
+                  }
                 } else {
                   result.push({polarity: true, relation: location.relation, args: [objectToMove, locationObjectKey]});
                 }
@@ -182,7 +184,9 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             for(var objectRelation of objectRelationsThatExistsInWorld) {
                 if (isMoveValid(objectToMove, location.relation, objectRelation.targetObject, state)) {
                   if (objectToMove == "itself") {
-                    result.push({polarity: true, relation: location.relation, args: [objectRelation.targetObject]});
+                    if (state.holding != null) {
+                        result.push({polarity: true, relation: location.relation, args: [state.holding, objectRelation.targetObject]});
+                    }
                   } else {
                     result.push({polarity: true, relation: location.relation, args: [objectToMove, objectRelation.targetObject]});
                   }
