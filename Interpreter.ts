@@ -195,7 +195,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return result;
     }
 
-    function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
+    export function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
       // Nothing can be inside a box if they are large and the box is small
       if (relation == "inside" &&
         (getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small")

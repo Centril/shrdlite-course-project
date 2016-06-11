@@ -74,50 +74,161 @@ module Planner {
      * "d". The code shows how to build a plan. Each step of the plan can
      * be added using the `push` method.
      */
-    function planInterpretation(interpretation : Interpreter.DNFFormula, state : WorldState) : string[] {
-        // This function returns a dummy plan involving a random stack
-        do {
-            var pickstack = Math.floor(Math.random() * state.stacks.length);
-        } while (state.stacks[pickstack].length == 0);
-        var plan : string[] = [];
+    function planInterpretation(interpretation: Interpreter.DNFFormula, state: WorldState): string[] {
+        //
 
-        // First move the arm to the leftmost nonempty stack
-        if (pickstack < state.arm) {
-            plan.push("Moving left");
-            for (var i = state.arm; i > pickstack; i--) {
-                plan.push("l");
-            }
-        } else if (pickstack > state.arm) {
-            plan.push("Moving right");
-            for (var i = state.arm; i < pickstack; i++) {
-                plan.push("r");
-            }
+
+
+
+        var graph = new SGraph();
+        var result: SearchResult<SNode> = undefined;
+        var startNode = new SNode(state);
+
+        var isGoal = function (node: SNode): boolean { };
+
+        result = aStarSearch(graph, startNode, isGoal, heuristic, 10);
+
+        //generate plan
+        var plan: string[] = [];
+
+        result.path.unshift(startNode);
+        for (let i = 0; i < result.path.length; i++) {
+            var edges = graph.outgoingEdges(result.path[i]);
+            var pathNode = result.path[i + 1];
+            for (let j = 0; j < edges.length; j++)
+                if (graph.compareNodes(pathNode, edges[j].to) == 0) {
+                    plan.push(edges[j].task);
+                }
         }
-
-        // Then pick up the object
-        var obj = state.stacks[pickstack][state.stacks[pickstack].length-1];
-        plan.push("Picking up the " + state.objects[obj].form,
-                  "p");
-
-        if (pickstack < state.stacks.length-1) {
-            // Then move to the rightmost stack
-            plan.push("Moving as far right as possible");
-            for (var i = pickstack; i < state.stacks.length-1; i++) {
-                plan.push("r");
-            }
-
-            // Then move back
-            plan.push("Moving back");
-            for (var i = state.stacks.length-1; i > pickstack; i--) {
-                plan.push("l");
-            }
-        }
-
-        // Finally put it down again
-        plan.push("Dropping the " + state.objects[obj].form,
-                  "d");
 
         return plan;
+
+    }
+
+    class SGraph implements Graph<SNode>{
+
+        outgoingEdges(node: SNode): Edge<SNode>[] {
+            var edges: Edge<SNode>[] = [];
+
+
+            //Move arm left?
+            if (node.state.arm > 0) {
+                var edge: Edge<SNode> = new Edge<SNode>();
+
+                edge.from = node; //Adding startnode
+
+                //Creating goal node
+                var tmpState: WorldState = { stacks: [], holding: undefined, arm: undefined, objects: undefined, examples: undefined };
+                for (var i = 0; i < node.state.stacks.length; i++) {
+                    tmpState.stacks.push(node.state.stacks[i].slice());
+                }
+                tmpState.holding = node.state.holding;
+                tmpState.arm = node.state.arm - 1; //Moving arm left
+                tmpState.objects = node.state.objects;
+                tmpState.examples = node.state.examples;
+
+                edge.to = new SNode(tmpState);
+                edge.cost = 1;
+
+                edges.push(edge);
+            }
+
+            //Move arm right?
+            if (node.state.arm < node.state.stacks.length ) {
+                var edge: Edge<SNode> = new Edge<SNode>();
+
+                edge.from = node; //Adding startnode
+
+                //Creating goal node
+                var tmpState: WorldState = { stacks: [], holding: undefined, arm: undefined, objects: undefined, examples: undefined };
+                for (var i = 0; i < node.state.stacks.length; i++) {
+                    tmpState.stacks.push(node.state.stacks[i].slice());
+                }
+                tmpState.holding = node.state.holding;
+                tmpState.arm = node.state.arm + 1; //Moving arm right
+                tmpState.objects = node.state.objects;
+                tmpState.examples = node.state.examples;
+
+                edge.to = new SNode(tmpState);
+                edge.cost = 1;
+
+                edges.push(edge);
+            }
+
+            //Can drop?
+            if (node.state.holding && node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1] ?
+                Interpreter.isMoveValid(node.state.holding, "ontop", node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1], tmpState) : true) {
+
+                var edge: Edge<SNode> = new Edge<SNode>();
+
+                edge.from = node; //Adding startnode
+
+                //Creating goal node
+                var tmpState: WorldState = { stacks: [], holding: undefined, arm: undefined, objects: undefined, examples: undefined };
+                for (var i = 0; i < node.state.stacks.length; i++) {
+                    tmpState.stacks.push(node.state.stacks[i].slice());
+                }
+                tmpState.stacks[tmpState.arm].push(tmpState.holding); //Dropping object on stack where arm is
+                tmpState.holding = null; //Arm isn't holding anything anymore
+                tmpState.arm = node.state.arm; 
+                tmpState.objects = node.state.objects;
+                tmpState.examples = node.state.examples;
+
+                edge.to = new SNode(tmpState);
+                edge.cost = 1;
+
+                edges.push(edge);
+
+            }
+
+            //Can pick up?
+            if (!node.state.holding && node.state.stacks[node.state.arm].length != 0) {
+                var edge: Edge<SNode> = new Edge<SNode>();
+
+                edge.from = node; //Adding startnode
+
+                //Creating goal node
+                var tmpState: WorldState = { stacks: [], holding: undefined, arm: undefined, objects: undefined, examples: undefined };
+                for (var i = 0; i < node.state.stacks.length; i++) {
+                    tmpState.stacks.push(node.state.stacks[i].slice());
+                }
+                tmpState.holding = tmpState.stacks[tmpState.arm].pop(); //Picking up top object from stack
+                tmpState.arm = node.state.arm;
+                tmpState.objects = node.state.objects;
+                tmpState.examples = node.state.examples;
+
+                edge.to = new SNode(tmpState);
+                edge.cost = 1;
+
+                edges.push(edge);
+            }
+
+            return edges;
+        }
+
+        compareNodes(one: SNode, theOther: SNode): number {
+            if (one.state.holding != theOther.state.holding) return 1;
+            if (one.state.arm != theOther.state.arm) return 1;
+            for (var i = 0; i < theOther.state.stacks.length; i++) {
+                for (var j = 0; j < theOther.state.stacks[i].length; j++) {
+                    if (!one.state.stacks[i][j] || one.state.stacks[i][j] != theOther.state.stacks[i][j]) return 1;
+                }
+            }
+
+            return 0;
+        }
+       
+    }
+
+    class SNode {
+
+        constructor(public state: WorldState) { }
+
+
+
+
+
+        
     }
 
 }
