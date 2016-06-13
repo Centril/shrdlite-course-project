@@ -108,10 +108,10 @@ module Planner {
         console.log("a" + result);
         result.path.unshift(startNode);
         console.log("b");
-        for (let i = 0; i < result.path.length; i++) {
+        for (let i = 0; i < result.path.length-1; i++) {
             var edges = graph.outgoingEdges(result.path[i]);
             console.log("c");
-            var pathNode = result.path[i + 1];
+            var pathNode = result.path[i+1];
             console.log("d");
             for (let j = 0; j < edges.length; j++)
                 if (graph.compareNodes(pathNode, edges[j].to) == 0) {
