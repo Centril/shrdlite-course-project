@@ -98,6 +98,7 @@ module Planner {
         };
 
         var heuristic = function (node: SNode): number {
+          console.log("Testing heuristic");
           var minHeuristic = 9999999;
           for (var _interpretation of interpretation) {
             var heuristicValue = getHeuristicForGoal(_interpretation[0], state)
@@ -133,7 +134,7 @@ module Planner {
     }
 
     class SGraph implements Graph<SNode>{
-        
+
 
         outgoingEdges(node: SNode): EdgeWithCommand<SNode>[]{
             console.log("3");
@@ -340,7 +341,7 @@ module Planner {
     class SNode {
 
         constructor(public state: WorldState) { }
-       
+
     }
 
     class EdgeWithCommand<SNode> extends Edge<SNode> {
