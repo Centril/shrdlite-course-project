@@ -88,8 +88,10 @@ module Planner {
         var startNode = new SNode(state);
 
         var isGoal = function (node: SNode): boolean {
+          console.log("Searching for goal");
           for (var _interpretation of interpretation) {
             if(isInterpretationInCurrentWorldstate(_interpretation[0], state)) {
+              console.log("Found goal", _interpretation[0]);
               return true;
             }
           }
@@ -97,7 +99,16 @@ module Planner {
         };
 
         var heuristic = function (node: SNode): number {
-          return 0;
+          console.log("Testing heuristic");
+          var minHeuristic = 9999999;
+          for (var _interpretation of interpretation) {
+            var heuristicValue = getHeuristicForGoal(_interpretation[0], state)
+            // We want to choose the smallest heuristic.
+            if (heuristicValue < minHeuristic) {
+              minHeuristic = heuristicValue;
+            }
+          }
+          return minHeuristic;
         }
 
         result = aStarSearch(graph, startNode, isGoal, heuristic, 10);
@@ -124,7 +135,7 @@ module Planner {
     }
 
     class SGraph implements Graph<SNode>{
-        
+
 
         outgoingEdges(node: SNode): EdgeWithCommand<SNode>[]{
             console.log("3");
@@ -259,7 +270,7 @@ module Planner {
       } else if (_interpretation.relation == "rightof") {
         foundObjectRelation = Interpreter.isRightOf(state.stacks, _interpretation.args[0], _interpretation.args[1]);
       } else if (_interpretation.relation == "holding") {
-        foundObjectRelation = Interpreter.doesObjectExist(state.stacks, _interpretation.args[0]);
+        foundObjectRelation = state.holding == _interpretation.args[0];
       } else {
         for (var stack of state.stacks) {
           if (_interpretation.relation == "inside") {
@@ -271,17 +282,67 @@ module Planner {
           } else if (_interpretation.relation == "under") {
             foundObjectRelation = Interpreter.isUnder(stack, _interpretation.args[0], _interpretation.args[1], state);
           } else {
-            console.log("WARNING: not implemented to check world for " +_interpretation.relation);
+            console.log("WARNING: not implemented to check goal for " +_interpretation.relation);
           }
         }
       }
       return foundObjectRelation;
     }
 
+    function getHeuristicForGoal(_interpretation: any, state: WorldState) :number {
+
+      if (_interpretation.relation == "holding") {
+        return Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]));
+
+      } else {
+        if (_interpretation.args[1] == "floor") {
+          if (_interpretation.args[0] == state.holding) {
+            return 1;
+          } else {
+            Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]))
+          }
+        } else {
+          if (
+            _interpretation.relation == "inside" ||
+            _interpretation.relation == "ontop" ||
+            _interpretation.relation == "above" ||
+            _interpretation.relation == "under"
+          ) {
+            return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
+
+          } else if (_interpretation.relation == "beside") {
+            // If we don't are beside each we give the heuristic value 4
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) == Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return 1;
+            } else {
+              return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) - 1;
+            }
+
+          } else if (_interpretation.relation == "leftof") {
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) > Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]);
+            } else {
+              return 0;
+            }
+
+          } else if (_interpretation.relation == "rightof") {
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) < Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return Interpreter.getStackNumber(state.stacks, _interpretation.args[1]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]);
+            } else {
+              return 0;
+            }
+          } else {
+            console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
+          }
+        }
+      }
+      return 1;
+    }
+
     class SNode {
 
         constructor(public state: WorldState) { }
-       
+
     }
 
     class EdgeWithCommand<SNode> extends Edge<SNode> {

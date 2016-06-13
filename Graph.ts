@@ -68,13 +68,15 @@ function aStarSearch<Node> (
     gScore.setValue(start, 0);
     fScore.setValue(start, heuristics(start));
     toVisit.add(start);
-
+    console.log("Reached here!");
     const perfStart = Date.now();
     while ( !toVisit.isEmpty() ) {
         if ((Date.now() - perfStart) / 1000 > timeout) return null;
 
         const current = toVisit.dequeue();
+        console.log("Reached here 2!");
         if ( goal( current ) ) {
+          console.log("Reached here 22!");
             let path = [current], cost = 0, curr = current;
             while (cameFrom.containsKey(curr)) {
                 const [from, ecost] = cameFrom.getValue(curr);
@@ -83,7 +85,7 @@ function aStarSearch<Node> (
             }
             return { path, cost };
         }
-
+        console.log("Reached here 3!");
         for (let {to, cost} of graph.outgoingEdges(current)) {
             const tvc = toVisit.contains(to),
                   newG = gScore.getValue(current) + cost;
