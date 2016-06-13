@@ -275,40 +275,51 @@ module Planner {
     }
 
     function getHeuristicForGoal(_interpretation: any, state: WorldState) :number {
+
       if (_interpretation.relation == "holding") {
         return Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]));
 
-      } else if (
-        _interpretation.relation == "inside" ||
-        _interpretation.relation == "ontop" ||
-        _interpretation.relation == "above" ||
-        _interpretation.relation == "under"
-      ) {
-        return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
-
-      } else if (_interpretation.relation == "beside") {
-        // If we don't are beside each we give the heuristic value 4
-        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) == Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-          return 4;
-        } else {
-          return 0;
-        }
-
-      } else if (_interpretation.relation == "leftof") {
-        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) < Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-          return 4;
-        } else {
-          return 0;
-        }
-
-      } else if (_interpretation.relation == "rightof") {
-        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) > Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-          return 4;
-        } else {
-          return 0;
-        }
       } else {
-        console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
+        if (_interpretation.args[1] == "floor") {
+          if (_interpretation.args[0] == state.holding) {
+            return 1;
+          } else {
+            Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]))
+          }
+        } else {
+          if (
+            _interpretation.relation == "inside" ||
+            _interpretation.relation == "ontop" ||
+            _interpretation.relation == "above" ||
+            _interpretation.relation == "under"
+          ) {
+            return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
+
+          } else if (_interpretation.relation == "beside") {
+            // If we don't are beside each we give the heuristic value 4
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) == Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return 1;
+            } else {
+              return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) - 1;
+            }
+
+          } else if (_interpretation.relation == "leftof") {
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) > Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]);
+            } else {
+              return 0;
+            }
+
+          } else if (_interpretation.relation == "rightof") {
+            if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) < Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+              return Interpreter.getStackNumber(state.stacks, _interpretation.args[1]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]);
+            } else {
+              return 0;
+            }
+          } else {
+            console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
+          }
+        }
       }
       return 1;
     }
