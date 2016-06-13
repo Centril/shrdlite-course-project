@@ -75,7 +75,8 @@ module Planner {
      * "d". The code shows how to build a plan. Each step of the plan can
      * be added using the `push` method.
      */
-    function planInterpretation(interpretation: Interpreter.DNFFormula, state: WorldState): string[] {
+    function planInterpretation(interpretation: Interpreter.DNFFormula, state: WorldState): string[]{
+        console.log("1");
         //
 
         console.log(state);
@@ -104,10 +105,14 @@ module Planner {
         //generate plan
         var plan: string[] = [];
 
+        console.log("a" + result);
         result.path.unshift(startNode);
+        console.log("b");
         for (let i = 0; i < result.path.length; i++) {
             var edges = graph.outgoingEdges(result.path[i]);
+            console.log("c");
             var pathNode = result.path[i + 1];
+            console.log("d");
             for (let j = 0; j < edges.length; j++)
                 if (graph.compareNodes(pathNode, edges[j].to) == 0) {
                     plan.push(edges[j].command);
@@ -119,13 +124,16 @@ module Planner {
     }
 
     class SGraph implements Graph<SNode>{
+        
 
-        outgoingEdges(node: SNode): EdgeWithCommand<SNode>[] {
+        outgoingEdges(node: SNode): EdgeWithCommand<SNode>[]{
+            console.log("3");
             var edges: EdgeWithCommand<SNode>[] = [];
 
 
             //Move arm left?
             if (node.state.arm > 0) {
+                console.log("4");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -148,7 +156,8 @@ module Planner {
             }
 
             //Move arm right?
-            if (node.state.arm < node.state.stacks.length ) {
+            if (node.state.arm < node.state.stacks.length-1) {
+                console.log("5");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -173,7 +182,7 @@ module Planner {
             //Can drop?
             if (node.state.holding && node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1] ?
                 Interpreter.isMoveValid(node.state.holding, "ontop", node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1], tmpState) : true) {
-
+                console.log("6");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -183,11 +192,14 @@ module Planner {
                 for (var i = 0; i < node.state.stacks.length; i++) {
                     tmpState.stacks.push(node.state.stacks[i].slice());
                 }
-                tmpState.stacks[tmpState.arm].push(tmpState.holding); //Dropping object on stack where arm is
-                tmpState.holding = null; //Arm isn't holding anything anymore
                 tmpState.arm = node.state.arm;
                 tmpState.objects = node.state.objects;
                 tmpState.examples = node.state.examples;
+                console.log("6e");
+                console.log("index" + node.state.arm + "  " + tmpState.stacks[node.state.arm]);
+                tmpState.stacks[node.state.arm].push(node.state.holding); //Dropping object on stack where arm is
+                console.log("6f");
+                tmpState.holding = null; //Arm isn't holding anything anymore
 
                 edge.to = new SNode(tmpState);
                 edge.cost = 1;
@@ -200,7 +212,7 @@ module Planner {
             //Can pick up?
             if (!node.state.holding && node.state.stacks[node.state.arm].length != 0) {
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
-
+                console.log("7");
                 edge.from = node; //Adding startnode
 
                 //Creating goal node
@@ -208,7 +220,7 @@ module Planner {
                 for (var i = 0; i < node.state.stacks.length; i++) {
                     tmpState.stacks.push(node.state.stacks[i].slice());
                 }
-                tmpState.holding = tmpState.stacks[tmpState.arm].pop(); //Picking up top object from stack
+                tmpState.holding = tmpState.stacks[node.state.arm].pop(); //Picking up top object from stack
                 tmpState.arm = node.state.arm;
                 tmpState.objects = node.state.objects;
                 tmpState.examples = node.state.examples;
@@ -269,12 +281,7 @@ module Planner {
     class SNode {
 
         constructor(public state: WorldState) { }
-
-
-
-
-
-
+       
     }
 
     class EdgeWithCommand<SNode> extends Edge<SNode> {
