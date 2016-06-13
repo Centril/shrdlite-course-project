@@ -341,11 +341,11 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     // Get the stack number.
-    export function getStackNumber(stacks: string[][], searched_object: string) : Boolean {
-      for(var stack of stacks) {
-        for(var object of stack) {
+    export function getStackNumber(stacks: string[][], searched_object: string) : number {
+      for(var stack_number in stacks) {
+        for(var object of stacks[stack_number]) {
           if (object == searched_object) {
-            return stack;
+            return +stack_number;
           }
         }
       }

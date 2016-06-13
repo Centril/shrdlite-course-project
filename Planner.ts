@@ -98,13 +98,13 @@ module Planner {
         var heuristic = function (node: SNode): number {
           var minHeuristic = 9999999;
           for (var _interpretation of interpretation) {
-            heuristicValue = getHeuristicForGoal(_interpretation[0], state)
+            var heuristicValue = getHeuristicForGoal(_interpretation[0], state)
             // We want to choose the smallest heuristic.
             if (heuristicValue < minHeuristic) {
               minHeuristic = heuristicValue;
             }
           }
-
+          return minHeuristic;
         }
 
         result = aStarSearch(graph, startNode, isGoal, heuristic, 10);
@@ -270,9 +270,9 @@ module Planner {
       return foundObjectRelation;
     }
 
-    function getHeuristicForGoal(_interpretation: any, state: WorldState) {
+    function getHeuristicForGoal(_interpretation: any, state: WorldState) :number {
       if (_interpretation.relation == "holding") {
-        return Math.abs(state.arm - getStackNumber(_interpretation.args[0]));
+        return Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]));
 
       } else if (
         _interpretation.relation == "inside" ||
@@ -280,17 +280,29 @@ module Planner {
         _interpretation.relation == "above" ||
         _interpretation.relation == "under"
       ) {
-        return Math.abs(getStackNumber(_interpretation.args[0]) - getStackNumber(_interpretation.args[1]));
+        return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
 
       } else if (_interpretation.relation == "beside") {
         // If we don't are beside each we give the heuristic value 4
-        return 4 * (getStackNumber(_interpretation.args[0]) == getStackNumber(_interpretation.args[1]));
+        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) == Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+          return 4;
+        } else {
+          return 0;
+        }
 
       } else if (_interpretation.relation == "leftof") {
-        return 4 * (getStackNumber(_interpretation.args[0]) < getStackNumber(_interpretation.args[1]));
+        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) < Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+          return 4;
+        } else {
+          return 0;
+        }
 
       } else if (_interpretation.relation == "rightof") {
-        return 4 * (getStackNumber(_interpretation.args[0]) > getStackNumber(_interpretation.args[1]));
+        if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) > Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
+          return 4;
+        } else {
+          return 0;
+        }
       } else {
         console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
       }
