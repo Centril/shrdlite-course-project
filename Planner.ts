@@ -91,6 +91,7 @@ module Planner {
           console.log("Searching for goal");
           for (var _interpretation of interpretation) {
             if(isInterpretationInCurrentWorldstate(_interpretation[0], state)) {
+              console.log("Found goal", _interpretation[0]);
               return true;
             }
           }
@@ -269,7 +270,7 @@ module Planner {
       } else if (_interpretation.relation == "rightof") {
         foundObjectRelation = Interpreter.isRightOf(state.stacks, _interpretation.args[0], _interpretation.args[1]);
       } else if (_interpretation.relation == "holding") {
-        foundObjectRelation = Interpreter.doesObjectExist(state.stacks, _interpretation.args[0]);
+        foundObjectRelation = state.holding == _interpretation.args[0];
       } else {
         for (var stack of state.stacks) {
           if (_interpretation.relation == "inside") {
