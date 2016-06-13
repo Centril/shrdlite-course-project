@@ -87,6 +87,7 @@ module Planner {
         var startNode = new SNode(state);
 
         var isGoal = function (node: SNode): boolean {
+          console.log("Searching for goal");
           for (var _interpretation of interpretation) {
             if(isInterpretationInCurrentWorldstate(_interpretation[0], state)) {
               return true;
