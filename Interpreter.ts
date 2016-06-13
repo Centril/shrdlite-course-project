@@ -342,7 +342,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
 
     // Check world state with relations.
-    function doesObjectExist(stacks: string[][], searched_object: string) : Boolean {
+    export function doesObjectExist(stacks: string[][], searched_object: string) : Boolean {
       for(var stack of stacks) {
         for(var object of stack) {
           if (object == searched_object) {
@@ -353,7 +353,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return false;
     }
 
-    function isInside(stack: string[], objectInside: string, objectBelow: string, state: WorldState) : Boolean {
+    export function isInside(stack: string[], objectInside: string, objectBelow: string, state: WorldState) : Boolean {
       // Cannot be inside a table.
       if (getObjectForm(objectBelow, state) != "table") {
         var foundObjectBelow: Boolean = false;
@@ -381,7 +381,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return false;
     }
 
-    function isRightOf(stacks: string[][], rightObject: string, secondObject: string) : Boolean {
+    export function isRightOf(stacks: string[][], rightObject: string, secondObject: string) : Boolean {
       var rightObjectStackNr: number = -10;
       var secondObjectStackNr: number = -10;
       for(var stack_number in stacks) {
@@ -398,7 +398,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return secondObjectStackNr != -10 && rightObjectStackNr != -10 && rightObjectStackNr - secondObjectStackNr > 0;
     }
 
-    function isLeftOf(stacks: string[][], leftObject: string, secondObject: string) : Boolean {
+    export function isLeftOf(stacks: string[][], leftObject: string, secondObject: string) : Boolean {
       var leftObjectStackNr: number = -10;
       var secondObjectStackNr: number = -10;
       for(var stack_number in stacks) {
@@ -415,7 +415,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return secondObjectStackNr != -10 && leftObjectStackNr != -10 && secondObjectStackNr - leftObjectStackNr > 0;
     }
 
-    function isBeside(stacks: string[][], firstObject: string, secondObject: string) : Boolean {
+    export function isBeside(stacks: string[][], firstObject: string, secondObject: string) : Boolean {
       var firstObjectStackNr: number = -10;
       var secondObjectStackNr: number = -10;
       for(var stack_number in stacks) {
@@ -432,7 +432,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return Math.abs(secondObjectStackNr - firstObjectStackNr) == 1;
     }
 
-    function isAbove(stack: string[], objectAbove: string, objectUnder: string, state: WorldState) : Boolean {
+    export function isAbove(stack: string[], objectAbove: string, objectUnder: string, state: WorldState) : Boolean {
       // Object above can't be floor
       if (getObjectForm(objectAbove, state) != "floor") {
         var foundObjectUnder: Boolean = false;
@@ -453,7 +453,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return false;
     }
 
-    function isUnder(stack: string[], objectUnder: string, objectAbove: string, state: WorldState) : Boolean {
+    export function isUnder(stack: string[], objectUnder: string, objectAbove: string, state: WorldState) : Boolean {
       // Object above can't be floor
       if (getObjectForm(objectAbove, state) != "floor" && getObjectForm(objectUnder, state) != "floor") {
         var foundObjectUnder: Boolean = false;
@@ -469,7 +469,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return false;
     }
 
-    function isOnTop(stack: string[], objectOnTop: string, objectBelow: string, state: WorldState) : Boolean {
+    export function isOnTop(stack: string[], objectOnTop: string, objectBelow: string, state: WorldState) : Boolean {
       // The floor can't be on top of anything
       if (getObjectForm(objectOnTop, state) != "floor") {
         var foundObjectBelow: Boolean = false;

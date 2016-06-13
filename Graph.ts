@@ -1,4 +1,5 @@
 ///<reference path="lib/node.d.ts"/>
+///<reference path="lib/collections.ts"/>
 
 import Dict = collections.Dictionary;
 import Set  = collections.BSTree;
