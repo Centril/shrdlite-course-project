@@ -340,6 +340,17 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
       return keys;
     }
 
+    // Get the stack number.
+    export function getStackNumber(stacks: string[][], searched_object: string) : Boolean {
+      for(var stack of stacks) {
+        for(var object of stack) {
+          if (object == searched_object) {
+            return stack;
+          }
+        }
+      }
+      return null;
+    }
 
     // Check world state with relations.
     export function doesObjectExist(stacks: string[][], searched_object: string) : Boolean {

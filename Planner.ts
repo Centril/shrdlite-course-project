@@ -96,7 +96,15 @@ module Planner {
         };
 
         var heuristic = function (node: SNode): number {
-          return 0;
+          var minHeuristic = 9999999;
+          for (var _interpretation of interpretation) {
+            heuristicValue = getHeuristicForGoal(_interpretation[0], state)
+            // We want to choose the smallest heuristic.
+            if (heuristicValue < minHeuristic) {
+              minHeuristic = heuristicValue;
+            }
+          }
+
         }
 
         result = aStarSearch(graph, startNode, isGoal, heuristic, 10);
@@ -255,11 +263,38 @@ module Planner {
           } else if (_interpretation.relation == "under") {
             foundObjectRelation = Interpreter.isUnder(stack, _interpretation.args[0], _interpretation.args[1], state);
           } else {
-            console.log("WARNING: not implemented to check world for " +_interpretation.relation);
+            console.log("WARNING: not implemented to check goal for " +_interpretation.relation);
           }
         }
       }
       return foundObjectRelation;
+    }
+
+    function getHeuristicForGoal(_interpretation: any, state: WorldState) {
+      if (_interpretation.relation == "holding") {
+        return Math.abs(state.arm - getStackNumber(_interpretation.args[0]));
+
+      } else if (
+        _interpretation.relation == "inside" ||
+        _interpretation.relation == "ontop" ||
+        _interpretation.relation == "above" ||
+        _interpretation.relation == "under"
+      ) {
+        return Math.abs(getStackNumber(_interpretation.args[0]) - getStackNumber(_interpretation.args[1]));
+
+      } else if (_interpretation.relation == "beside") {
+        // If we don't are beside each we give the heuristic value 4
+        return 4 * (getStackNumber(_interpretation.args[0]) == getStackNumber(_interpretation.args[1]));
+
+      } else if (_interpretation.relation == "leftof") {
+        return 4 * (getStackNumber(_interpretation.args[0]) < getStackNumber(_interpretation.args[1]));
+
+      } else if (_interpretation.relation == "rightof") {
+        return 4 * (getStackNumber(_interpretation.args[0]) > getStackNumber(_interpretation.args[1]));
+      } else {
+        console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
+      }
+      return 1;
     }
 
     class SNode {
