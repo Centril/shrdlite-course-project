@@ -110,7 +110,7 @@ module Planner {
             var pathNode = result.path[i + 1];
             for (let j = 0; j < edges.length; j++)
                 if (graph.compareNodes(pathNode, edges[j].to) == 0) {
-                    //plan.push(edges[j].task);
+                    plan.push(edges[j].command);
                 }
         }
 
@@ -120,13 +120,13 @@ module Planner {
 
     class SGraph implements Graph<SNode>{
 
-        outgoingEdges(node: SNode): Edge<SNode>[] {
-            var edges: Edge<SNode>[] = [];
+        outgoingEdges(node: SNode): EdgeWithCommand<SNode>[] {
+            var edges: EdgeWithCommand<SNode>[] = [];
 
 
             //Move arm left?
             if (node.state.arm > 0) {
-                var edge: Edge<SNode> = new Edge<SNode>();
+                var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
 
@@ -142,13 +142,14 @@ module Planner {
 
                 edge.to = new SNode(tmpState);
                 edge.cost = 1;
+                edge.command = "l";
 
                 edges.push(edge);
             }
 
             //Move arm right?
             if (node.state.arm < node.state.stacks.length ) {
-                var edge: Edge<SNode> = new Edge<SNode>();
+                var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
 
@@ -164,6 +165,7 @@ module Planner {
 
                 edge.to = new SNode(tmpState);
                 edge.cost = 1;
+                edge.command = "r";
 
                 edges.push(edge);
             }
@@ -172,7 +174,7 @@ module Planner {
             if (node.state.holding && node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1] ?
                 Interpreter.isMoveValid(node.state.holding, "ontop", node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1], tmpState) : true) {
 
-                var edge: Edge<SNode> = new Edge<SNode>();
+                var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
 
@@ -189,6 +191,7 @@ module Planner {
 
                 edge.to = new SNode(tmpState);
                 edge.cost = 1;
+                edge.command = "d";
 
                 edges.push(edge);
 
@@ -196,7 +199,7 @@ module Planner {
 
             //Can pick up?
             if (!node.state.holding && node.state.stacks[node.state.arm].length != 0) {
-                var edge: Edge<SNode> = new Edge<SNode>();
+                var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
 
@@ -212,6 +215,7 @@ module Planner {
 
                 edge.to = new SNode(tmpState);
                 edge.cost = 1;
+                edge.command = "p";
 
                 edges.push(edge);
             }
@@ -271,6 +275,10 @@ module Planner {
 
 
 
+    }
+
+    class EdgeWithCommand<SNode> extends Edge<SNode> {
+        command: string;
     }
 
 }
