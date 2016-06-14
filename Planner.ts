@@ -90,7 +90,7 @@ module Planner {
         var isGoal = function (node: SNode): boolean {
           console.log("Searching for goal");
           for (var _interpretation of interpretation) {
-            if(isInterpretationInCurrentWorldstate(_interpretation[0], state)) {
+            if(isInterpretationInCurrentWorldstate(_interpretation[0], node.state)) {
               console.log("Found goal", _interpretation[0]);
               return true;
             }
@@ -342,6 +342,9 @@ module Planner {
     class SNode {
 
         constructor(public state: WorldState) { }
+		toString(): string {
+			return JSON.stringify(this);
+		}
 
     }
 
