@@ -251,7 +251,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
         } else if (objectRelation.relation == "rightof") {
           foundObjectRelation = isRightOf(state.stacks, objectRelation.targetObject, objectRelation.locationObject);
         } else if (objectRelation.relation == "") {
-          foundObjectRelation = doesObjectExist(state.stacks, objectRelation.targetObject);
+          foundObjectRelation = doesObjectExist(state.holding, state.stacks, objectRelation.targetObject);
         } else {
           for (var stack of state.stacks) {
             if (objectRelation.relation == "inside") {
@@ -331,7 +331,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
             (object.form == state.objects[key].form || object.form == "anyform")
             && (object.color == state.objects[key].color || object.color == null)
             && (object.size == state.objects[key].size  || object.size == null)) {
-              if (doesObjectExist(state.stacks, key)) {
+              if (doesObjectExist(state.holding, state.stacks, key)) {
                 keys.push(key);
               }
             }
@@ -353,7 +353,8 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     // Check world state with relations.
-    export function doesObjectExist(stacks: string[][], searched_object: string) : Boolean {
+    export function doesObjectExist(holding: string, stacks: string[][], searched_object: string): Boolean {
+	  if (holding == searched_object) return true;
       for(var stack of stacks) {
         for(var object of stack) {
           if (object == searched_object) {
