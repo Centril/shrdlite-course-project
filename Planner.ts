@@ -90,7 +90,7 @@ module Planner {
         var isGoal = function (node: SNode): boolean {
           console.log("Searching for goal");
           for (var _interpretation of interpretation) {
-            if(isInterpretationInCurrentWorldstate(_interpretation[0], state)) {
+            if(isInterpretationInCurrentWorldstate(_interpretation[0], node.state)) {
               console.log("Found goal", _interpretation[0]);
               return true;
             }
@@ -119,10 +119,10 @@ module Planner {
         console.log("a" + result);
         result.path.unshift(startNode);
         console.log("b");
-        for (let i = 0; i < result.path.length; i++) {
+        for (let i = 0; i < result.path.length-1; i++) {
             var edges = graph.outgoingEdges(result.path[i]);
             console.log("c");
-            var pathNode = result.path[i + 1];
+            var pathNode = result.path[i+1];
             console.log("d");
             for (let j = 0; j < edges.length; j++)
                 if (graph.compareNodes(pathNode, edges[j].to) == 0) {
@@ -342,6 +342,9 @@ module Planner {
     class SNode {
 
         constructor(public state: WorldState) { }
+		toString(): string {
+			return JSON.stringify(this);
+		}
 
     }
 
