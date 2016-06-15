@@ -76,11 +76,9 @@ module Planner {
      * be added using the `push` method.
      */
     function planInterpretation(interpretation: Interpreter.DNFFormula, state: WorldState): string[]{
-        console.log("1");
-        //
-
         console.log(state);
         console.log(interpretation);
+        var start = new Date().getTime();
 
 
         var graph = new SGraph();
@@ -88,7 +86,7 @@ module Planner {
         var startNode = new SNode(state);
 
         var isGoal = function (node: SNode): boolean {
-          console.log("Searching for goal");
+          //console.log("Searching for goal");
           for (var _interpretation of interpretation) {
             if(isInterpretationInCurrentWorldstate(_interpretation[0], node.state)) {
               console.log("Found goal", _interpretation[0]);
@@ -99,31 +97,39 @@ module Planner {
         };
 
         var heuristic = function (node: SNode): number {
-          console.log("Testing heuristic");
+          //console.log("Testing heuristic");
           var minHeuristic = 9999999;
           for (var _interpretation of interpretation) {
-            var heuristicValue = getHeuristicForGoal(_interpretation[0], state)
+            var heuristicValue = getHeuristicForGoal(_interpretation[0], node.state)
             // We want to choose the smallest heuristic.
             if (heuristicValue < minHeuristic) {
               minHeuristic = heuristicValue;
             }
           }
+
           return minHeuristic;
         }
 
-        result = aStarSearch(graph, startNode, isGoal, heuristic, 10);
+        result = aStarSearch(graph, startNode, isGoal, heuristic, 500);
+        var end = new Date().getTime();
+        var time = end - start;
+        console.log('Execution time: ' + time);
 
+        if (result == null) {
+          console.log("Could not find solution");
+          return null;
+        }
         //generate plan
         var plan: string[] = [];
 
-        console.log("a" + result);
+        //console.log("a" + result);
         result.path.unshift(startNode);
-        console.log("b");
+        //console.log("b");
         for (let i = 0; i < result.path.length-1; i++) {
             var edges = graph.outgoingEdges(result.path[i]);
-            console.log("c");
+            //console.log("c");
             var pathNode = result.path[i+1];
-            console.log("d");
+            //console.log("d");
             for (let j = 0; j < edges.length; j++)
                 if (graph.compareNodes(pathNode, edges[j].to) == 0) {
                     plan.push(edges[j].command);
@@ -138,13 +144,13 @@ module Planner {
 
 
         outgoingEdges(node: SNode): EdgeWithCommand<SNode>[]{
-            console.log("3");
+            //console.log("3");
             var edges: EdgeWithCommand<SNode>[] = [];
 
 
             //Move arm left?
             if (node.state.arm > 0) {
-                console.log("4");
+                //console.log("4");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -168,7 +174,7 @@ module Planner {
 
             //Move arm right?
             if (node.state.arm < node.state.stacks.length-1) {
-                console.log("5");
+                //console.log("5");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -193,7 +199,7 @@ module Planner {
             //Can drop?
             if (node.state.holding && node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1] ?
                 Interpreter.isMoveValid(node.state.holding, "ontop", node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1], tmpState) : true) {
-                console.log("6");
+                //console.log("6");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
                 edge.from = node; //Adding startnode
@@ -206,10 +212,10 @@ module Planner {
                 tmpState.arm = node.state.arm;
                 tmpState.objects = node.state.objects;
                 tmpState.examples = node.state.examples;
-                console.log("6e");
-                console.log("index" + node.state.arm + "  " + tmpState.stacks[node.state.arm]);
+                //console.log("6e");
+                //console.log("index" + node.state.arm + "  " + tmpState.stacks[node.state.arm]);
                 tmpState.stacks[node.state.arm].push(node.state.holding); //Dropping object on stack where arm is
-                console.log("6f");
+                //console.log("6f");
                 tmpState.holding = null; //Arm isn't holding anything anymore
 
                 edge.to = new SNode(tmpState);
@@ -223,7 +229,7 @@ module Planner {
             //Can pick up?
             if (!node.state.holding && node.state.stacks[node.state.arm].length != 0) {
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
-                console.log("7");
+                //console.log("7");
                 edge.from = node; //Adding startnode
 
                 //Creating goal node
@@ -299,44 +305,48 @@ module Planner {
           if (_interpretation.args[0] == state.holding) {
             return 1;
           } else {
-            Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]))
+            return Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]))
           }
         } else {
+
+          var minArm = Math.min(Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[0])),
+            Math.abs(state.arm - Interpreter.getStackNumber(state.stacks, _interpretation.args[1])));
           if (
             _interpretation.relation == "inside" ||
             _interpretation.relation == "ontop" ||
             _interpretation.relation == "above" ||
             _interpretation.relation == "under"
           ) {
-            return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
+            var minMove = Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
 
           } else if (_interpretation.relation == "beside") {
             // If we don't are beside each we give the heuristic value 4
             if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) == Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-              return 1;
+              var minMove = 1;
             } else {
-              return Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) - 1;
+              var minMove = Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) - 1;
             }
 
           } else if (_interpretation.relation == "leftof") {
             if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) > Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-              return Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]);
+              var minMove = Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]);
             } else {
-              return 0;
+              var minMove = 0;
             }
 
           } else if (_interpretation.relation == "rightof") {
             if (Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) < Interpreter.getStackNumber(state.stacks, _interpretation.args[1])) {
-              return Interpreter.getStackNumber(state.stacks, _interpretation.args[1]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]);
+              var minMove = Interpreter.getStackNumber(state.stacks, _interpretation.args[1]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[0]);
             } else {
-              return 0;
+              var minMove = 0;
             }
           } else {
             console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
           }
+          return minMove + minArm;
         }
       }
-      return 1;
+      //return 1;
     }
 
     class SNode {
