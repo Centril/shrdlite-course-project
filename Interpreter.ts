@@ -371,6 +371,7 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
 
     export function isInside(stack: string[], objectInside: string, objectBelow: string, state: WorldState) : Boolean {
       // Cannot be inside a table.
+
       if (getObjectForm(objectBelow, state) != "table") {
         var foundObjectBelow: Boolean = false;
         for(var object of stack) {

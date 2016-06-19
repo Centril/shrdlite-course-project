@@ -147,7 +147,7 @@ module Planner {
             //console.log("3");
             var edges: EdgeWithCommand<SNode>[] = [];
 
-
+            var targetObject = node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1];
             //Move arm left?
             if (node.state.arm > 0) {
                 //console.log("4");
@@ -197,8 +197,10 @@ module Planner {
             }
 
             //Can drop?
-            if (node.state.holding && node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1] ?
-                Interpreter.isMoveValid(node.state.holding, "ontop", node.state.stacks[node.state.arm][node.state.stacks[node.state.arm].length - 1], tmpState) : true) {
+            if (node.state.holding &&  targetObject ?
+                Interpreter.isMoveValid(node.state.holding, "ontop", targetObject, node.state)
+                || Interpreter.isMoveValid(node.state.holding, "inside", targetObject, node.state)
+                 : true) {
                 //console.log("6");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
@@ -223,7 +225,6 @@ module Planner {
                 edge.command = "d";
 
                 edges.push(edge);
-
             }
 
             //Can pick up?
@@ -290,8 +291,12 @@ module Planner {
           } else {
             console.log("WARNING: not implemented to check goal for " +_interpretation.relation);
           }
+          if (foundObjectRelation) {
+            return true;
+          }
         }
       }
+
       return foundObjectRelation;
     }
 
@@ -318,6 +323,7 @@ module Planner {
             _interpretation.relation == "under"
           ) {
             var minMove = Math.abs(Interpreter.getStackNumber(state.stacks, _interpretation.args[0]) - Interpreter.getStackNumber(state.stacks, _interpretation.args[1]));
+            var minAccessTargetObject = accessTargetObject(_interpretation.args[0], state);
 
           } else if (_interpretation.relation == "beside") {
             // If we don't are beside each we give the heuristic value 4
@@ -343,10 +349,32 @@ module Planner {
           } else {
             console.log("WARNING: not implemented to heuristic for " +_interpretation.relation);
           }
-          return minMove + minArm;
+          return minMove + minArm + minAccessTargetObject;
         }
       }
       //return 1;
+    }
+
+    function accessTargetObject(targetObject: string, state: WorldState) {
+      var foundTargetObject: Boolean = false;
+      var nrAbove: number = 0;
+      for(var stack_number in state.stacks) {
+        for(var object of state.stacks[stack_number]) {
+          if (foundTargetObject) {
+            nrAbove++;
+          }
+          if (object == targetObject) {
+            foundTargetObject = true;
+            break;
+          }
+        }
+        if (foundTargetObject) {
+          // All above we need to pick up, move and return
+          return nrAbove*3;
+        }
+      }
+      // We did not find any object.
+      return 0;
     }
 
     class SNode {
