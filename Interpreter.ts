@@ -200,40 +200,46 @@ Top-level function for the Interpreter. It calls `interpretCommand` for each pos
     }
 
     export function isMoveValid(objectToMove: string, relation: string, targetObject: string, state: WorldState) {
-      // Nothing can be inside a box if they are large and the box is small
-      if (relation == "inside" &&
-        (getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small")
-          && getObjectForm(targetObject, state) == "box") {
-        return false;
+        // Nothing can be inside a box if they are large and the box is small
+        if (relation == "inside" &&
+            (getObjectSize(objectToMove, state) == "large" && getObjectSize(targetObject, state) == "small")
+            && getObjectForm(targetObject, state) == "box") {
+            return false;
 
-        // Box, plank and pyrmaids cannot be inside or on top of a box if they are large or the box is small
-      } else if (
-          (relation == "inside" || relation == "ontop") &&
-          (
+            // Box, plank and pyrmaids cannot be inside or on top of a box if they are large or the box is small
+        } else if (
+            (relation == "inside" || relation == "ontop") &&
+            (
             getObjectForm(objectToMove, state) == "box" ||
             getObjectForm(objectToMove, state) == "plank" ||
             getObjectForm(objectToMove, state) == "pyramid"
-          )
-          && getObjectForm(targetObject, state) == "box") {
-        if (getObjectSize(objectToMove, state) == "large" || getObjectSize(targetObject, state) == "small") {
-          return false;
-        }
+            )
+            && getObjectForm(targetObject, state) == "box") {
+            if (getObjectSize(objectToMove, state) == "large" || getObjectSize(targetObject, state) == "small") {
+                return false;
+            }
 
-        // Boxes cannot be inside or on top of a brick or pyramid
-      } else if (
-          (relation == "inside" || relation == "ontop") &&
-          getObjectForm(objectToMove, state) == "box" && (
+            // Boxes cannot be inside or on top of a brick or pyramid
+        } else if (
+            (relation == "inside" || relation == "ontop") &&
+            getObjectForm(objectToMove, state) == "box" && (
             getObjectForm(targetObject, state) == "brick" ||
             getObjectForm(targetObject, state) == "pyramid"
-          )) {
-        return false;
+            )) {
+            return false;
 
-        // Balls can only be on top of floors
-      } else if (relation == "ontop" && getObjectForm(objectToMove, state) == "ball"
-        && (
-          getObjectForm(targetObject, state) != "floor"
-        )) {
-        return false;
+            // Balls can only be on top of floors
+        } else if (relation == "ontop" && getObjectForm(objectToMove, state) == "ball"
+            && (
+            getObjectForm(targetObject, state) != "floor"
+            )) {
+            return false;
+
+            // Nothing can e on top of a ball
+        } else if (
+            (relation == "inside" || relation == "ontop") &&
+            getObjectForm(targetObject, state) == "ball") {
+            return false;
 
         // We cannot move stuff when the targetObject is the same as the one to move
       } else if (targetObject == objectToMove) {

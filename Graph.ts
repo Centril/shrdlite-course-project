@@ -54,7 +54,8 @@ function aStarSearch<Node> (
     goal       : (n:Node) => boolean,
     heuristics : (n:Node) => number,
     timeout    : number
-) : SearchResult<Node> {
+    ): SearchResult<Node> {
+    var edgeCount = 0;
     const cameFrom: Dict<Node, [Node, number]> = new Dict<Node, [Node, number]>(),
           gScore  : Dict<Node, number> = new Dict<Node, number>(),
           fScore  : Dict<Node, number> = new Dict<Node, number>(),
@@ -84,9 +85,11 @@ function aStarSearch<Node> (
                 cost += ecost;
                 path.unshift(curr = from);
             }
+            console.log("Edge count: " + edgeCount);
             return { path, cost };
         }
-        for (let {to, cost} of graph.outgoingEdges(current)) {
+        for (let {to, cost } of graph.outgoingEdges(current)) {
+            edgeCount++;
             const tvc = toVisit.contains(to),
                   newG = gScore.getValue(current) + cost;
             if (tvc && (newG < gScore.getValue(to))

@@ -197,10 +197,10 @@ module Planner {
             }
 
             //Can drop?
-            if (node.state.holding &&  targetObject ?
+            if (node.state.holding && ( targetObject ?
                 Interpreter.isMoveValid(node.state.holding, "ontop", targetObject, node.state)
                 || Interpreter.isMoveValid(node.state.holding, "inside", targetObject, node.state)
-                 : true) {
+                 : true) ) {
                 //console.log("6");
                 var edge: EdgeWithCommand<SNode> = new EdgeWithCommand<SNode>();
 
